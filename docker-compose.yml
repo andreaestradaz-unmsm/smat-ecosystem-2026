@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # 1. El Broker MQTT (Necesario para que tus dispositivos se comuniquen)
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    # mosquitto.conf básico en memoria para permitir conexiones anónimas en desarrollo
+    command: mosquitto -c /mosquitto-no-auth.conf
+    # Truco para que mosquitto funcione sin crear archivos de config extra:
+    entrypoint: sh -c "echo 'listener 1883 \n allow_anonymous true' > /mosquitto-no-auth.conf && /usr/sbin/mosquitto -c /mosquitto-no-auth.conf"
+
+  # 2. Tu Backend en FastAPI
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mqtt-broker
+
+  # 3. Tus scripts de IoT
+  iot-device:
+    build:
+      context: ./iot_device
+    depends_on:
+      - mqtt-broker
+      - backend
